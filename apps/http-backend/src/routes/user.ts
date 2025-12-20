@@ -37,7 +37,7 @@ userRoute.post("/signup", async (req: Request, res: Response): Promise<any> => {
         });
 
         const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '8d' });
-        res.cookie("token", token, { expires: new Date(Date.now() + 8 * 3600000) });
+        res.cookie("token", token, { expires: new Date(Date.now() + 8 * 24 *3600000) });
 
         res.status(201).json({
             message: "User created successfully",
@@ -108,5 +108,49 @@ userRoute.post("/signin", async (req: Request, res: Response): Promise<any> => {
         });
     }
 });
+
+
+userRoute.post("/room", middleware, async (req, res): Promise<void> => {
+    try {
+        const isValidData = CreateRoomSchema.parse(req.body);
+
+        const userId = req.userId;
+        if (!userId) {
+            res.status(401).json({
+                error: "Unauthorized",
+                success: false
+            });
+            return;
+        }
+
+       const room =  await prisma.room.create({
+            data: {
+                slug: isValidData?.slug,
+                adminId: userId,
+            }
+        });
+
+        res.json({
+            message: "Room created successfully",
+            success: true,
+            room: {
+                id: room.id,
+            }
+        });
+        return;
+    } catch (err) {
+        res.status(400).json({
+            error: `Invalid data, ${err}`,
+            success: false
+        });
+        return;
+    }
+});
+
+
+
+
+
+
 
 export default userRoute;

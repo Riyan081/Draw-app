@@ -38,6 +38,9 @@ importers:
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
       express:
         specifier: ^4.21.2
         version: 4.21.2
@@ -54,6 +57,9 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
+      '@types/cors':
+        specifier: ^2.8.13
+        version: 2.8.19
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.0
@@ -116,9 +122,15 @@ importers:
 
   packages/backend-common:
     dependencies:
+      '@types/cors':
+        specifier: ^2.8.19
+        version: 2.8.19
       '@types/node':
         specifier: ^22.10.5
         version: 22.10.5
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
@@ -156,7 +168,7 @@ importers:
         specifier: ^25.0.3
         version: 25.0.3
       prisma:
-        specifier: '7'
+        specifier: ^7.2.0
         version: 7.2.0(@types/react@18.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.5.4)
 
   packages/eslint-config:
@@ -614,6 +626,9 @@ packages:
     peerDependencies:
       '@types/express': '*'
 
+  '@types/cors@2.8.19':
+    resolution: {integrity: sha512-mFNylyeyqN93lfe/9CSxOGREz8cpzAhH+E93xJ4xWQf62V8sQ/24reV2nyzUWM6H6Xji+GGHpkbLe7pVoUEskg==}
+
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
 
@@ -1029,6 +1044,10 @@ packages:
 
   core-js-pure@3.39.0:
     resolution: {integrity: sha512-7fEcWwKI4rJinnK+wLTezeg2smbFFdSBP6E2kQZNbnzM2s1rpKQ6aaRteZSSg7FLU3P0HGGVo/gbpfanU36urg==}
+
+  cors@2.8.5:
+    resolution: {integrity: sha512-KIHbLJqu73RGr/hnbrO9uBeixNGuvSQjul/jdFvS/KFSIH1hWVd1ng7zOHx+YrEfInLG7q4n6GHQ9cDtxv/P6g==}
+    engines: {node: '>= 0.10'}
 
   create-require@1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
@@ -3184,6 +3203,10 @@ snapshots:
     dependencies:
       '@types/express': 5.0.0
 
+  '@types/cors@2.8.19':
+    dependencies:
+      '@types/node': 20.17.6
+
   '@types/estree@1.0.6': {}
 
   '@types/express-serve-static-core@5.0.4':
@@ -3699,6 +3722,11 @@ snapshots:
   cookie@0.7.2: {}
 
   core-js-pure@3.39.0: {}
+
+  cors@2.8.5:
+    dependencies:
+      object-assign: 4.1.1
+      vary: 1.1.2
 
   create-require@1.1.1: {}
 
