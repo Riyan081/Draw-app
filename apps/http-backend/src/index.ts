@@ -1,5 +1,5 @@
 import express from "express";
-import prisma from "@repo/db/client";
+
 import cookieparser from "cookie-parser";
 import userRoute from "./routes/user";
 import cors from "cors";

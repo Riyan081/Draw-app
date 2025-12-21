@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from '@repo/backend-common/config';
 import { middleware } from "../Middleware/middleware";
 import { CreateUserSchema, SigninSchema, CreateRoomSchema } from "@repo/common/types";
-import prisma from "@repo/db/client";
+import { prismaClient } from "@repo/db/client";
 import bcrypt from "bcrypt";
 
 const userRoute: express.Router = express.Router();
@@ -13,22 +13,22 @@ userRoute.post("/signup", async (req: Request, res: Response): Promise<any> => {
         const isValidData = CreateUserSchema.parse(req.body);
         const { email, password, name } = isValidData;
 
-        const existingUser = await prisma.user.findUnique({
-            where: {
-                email
-            }
-        });
+        // const existingUser = await prisma.user.findUnique({
+        //     where: {
+        //         email
+        //     }
+        // });
         
-        if (existingUser) {
-            return res.status(400).json({
-                error: "User already exists",
-                success: false
-            });
-        }
+        // if (existingUser) {
+        //     return res.status(400).json({
+        //         error: "User already exists",
+        //         success: false
+        //     });
+        // }
 
         const hashpassword = await bcrypt.hash(password, 10);
 
-        const user = await prisma.user.create({
+        const user = await prismaClient.user.create({
             data: {
                 email,
                 password: hashpassword,
@@ -62,7 +62,7 @@ userRoute.post("/signin", async (req: Request, res: Response): Promise<any> => {
         const isValidData = SigninSchema.parse(req.body);
         const { email, password } = isValidData;
 
-        const user = await prisma.user.findUnique({
+        const user = await prismaClient.user.findUnique({
             where: {
                 email
             }
@@ -123,7 +123,7 @@ userRoute.post("/room", middleware, async (req, res): Promise<void> => {
             return;
         }
 
-       const room =  await prisma.room.create({
+       const room =  await prismaClient.room.create({
             data: {
                 slug: isValidData?.slug,
                 adminId: userId,
