@@ -13,18 +13,18 @@ userRoute.post("/signup", async (req: Request, res: Response): Promise<any> => {
         const isValidData = CreateUserSchema.parse(req.body);
         const { email, password, name } = isValidData;
 
-        // const existingUser = await prisma.user.findUnique({
-        //     where: {
-        //         email
-        //     }
-        // });
+        const existingUser = await prismaClient.user.findUnique({
+            where: {
+                email
+            }
+        });
         
-        // if (existingUser) {
-        //     return res.status(400).json({
-        //         error: "User already exists",
-        //         success: false
-        //     });
-        // }
+        if (existingUser) {
+            return res.status(400).json({
+                error: "User already exists",
+                success: false
+            });
+        }
 
         const hashpassword = await bcrypt.hash(password, 10);
 
@@ -110,7 +110,7 @@ userRoute.post("/signin", async (req: Request, res: Response): Promise<any> => {
 });
 
 
-userRoute.post("/room", middleware, async (req, res): Promise<void> => {
+userRoute.post("/room",middleware,async (req, res): Promise<void> => {
     try {
         const isValidData = CreateRoomSchema.parse(req.body);
 
@@ -147,7 +147,55 @@ userRoute.post("/room", middleware, async (req, res): Promise<void> => {
     }
 });
 
+userRoute.get("/chats/:roomId", async(req,res)=>{
+    try {
+        const roomId = Number(req.params.roomId)
+        const messages = await prismaClient.chat.findMany({
+            where:{
+                roomId: roomId
+            },
+            orderBy:{
+                 id:"desc"
+            },
+            take:50
 
+        })
+        res.json({
+            message: "Messages retrieved successfully",
+            success: true,
+            messages: messages
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to retrieve messages",
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+})
+
+userRoute.get("/room/:slug", async(req,res)=>{
+    try {
+        const roomId = req.params.slug;
+        const messages = await prismaClient.room.findFirst({
+            where:{
+                slug: roomId
+            },
+           
+        })
+        res.json({
+            message: "Messages retrieved successfully",
+            success: true,
+            room: messages
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to retrieve room",
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+})
 
 
 
