@@ -3,7 +3,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 
 const Hero = () => {
   return (
-    <section className="relative min-h-screen pt-24 pb-16 overflow-hidden gradient-hero">
+    <section className="relative min-h-screen pt-24 pb-16 overflow-hidden gradient-hero bg-[#1A1E26]">
       {/* Decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 border-2 border-primary/20 rounded-full float" style={{ animationDelay: '0s' }} />
@@ -12,7 +12,7 @@ const Hero = () => {
         <div className="absolute bottom-20 right-40 w-24 h-24 border-2 border-accent/20 rounded-full float" style={{ animationDelay: '0.5s' }} />
       </div>
 
-      <div className="container mx-auto px-4 relative z-10">
+      <div className="container  mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-card px-4 py-2 rounded-full border border-border mb-8 opacity-0 animate-fade-in-up">
             <Sparkles className="w-4 h-4 text-primary" />
