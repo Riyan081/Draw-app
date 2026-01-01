@@ -29,6 +29,9 @@ export function ChatRoomClient({
         if (parsedData.type === "chat") {
           setChats((prev) => [...prev, parsedData.message]);
         }
+        
+
+
       };
     }
   }, [loading, socket, id]);

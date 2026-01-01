@@ -9,12 +9,11 @@ async function fetchRoomData(slug:string){
 }
 
 const page = async({params}: {params: {slug: string}}) => {
-  const slug =await params.slug
+  const slug = await params.slug
   const roomData = await fetchRoomData(slug);
   console.log(roomData);
-  return (
-    <ChatRoom id={roomData.room.id} />
-  )
+  const chatRoomElement = await ChatRoom({ id: roomData.room.id });
+  return chatRoomElement;
 }
 
 export default page
