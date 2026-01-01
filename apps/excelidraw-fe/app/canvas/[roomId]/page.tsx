@@ -1,15 +1,17 @@
-
 import React from 'react'
 import RoomCanvas from '@/components/Page/RoomCanvas'
-const page =async ({params}:{params:{roomId:string}}) => {
-   const roomId = params.roomId
+
+const Page = async ({ params }: { params: Promise<{ roomId: string }> }) => {
+  // Await the params Promise to get the actual values
+  const { roomId } = await params;
+  
+  console.log("Room ID:", roomId);
+  
   return (
     <div>
-      
       <RoomCanvas roomId={roomId} />
-    </div>  
-    
+    </div>
   )
 }
 
-export default page
+export default Page
