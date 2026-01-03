@@ -11,15 +11,24 @@ const Canvas = ({ roomId, socket }: { roomId: string; socket: WebSocket }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedTool, setselectedTool] = useState<tools>("rectangle");
 
-
-  useEffect(()=>{
+  useEffect(() => {
+    //@ts-ignore
     window.selectedShape = selectedTool;
-  },[selectedTool])
+  }, [selectedTool]);
 
   useEffect(() => {
-    if (canvasRef.current) {
-      
-      initDraw(canvasRef.current, roomId, socket);
+    let cleanupFunc: (() => void) | undefined;
+    const startDrawing = async () => {
+      if (canvasRef.current) {
+        cleanupFunc = await initDraw(canvasRef.current, roomId, socket);
+      }
+    };
+    startDrawing();
+
+    return ()=>{
+      if(cleanupFunc){
+        cleanupFunc();
+      }
     }
   }, [canvasRef]);
 
@@ -42,23 +51,26 @@ function TopBar({
 }) {
   return (
     <div className=" gap-5 fixed top-0 left-0 w-full h-12 flex items-center space-x-4 p-2 z-10">
-      <div 
-      onClick={() => setselectedTool("rectangle")}
-      className={selectedTool === "rectangle" ? "text-amber-200 p-1 rounded" : ""}
-      
+      <div
+        onClick={() => setselectedTool("rectangle")}
+        className={
+          selectedTool === "rectangle" ? "text-amber-200 p-1 rounded" : ""
+        }
       >
         <Square />
       </div>
 
       <div
-      onClick={() => setselectedTool("circle")}
-      className={selectedTool === "circle" ? "text-amber-200 p-1 rounded" : ""}
+        onClick={() => setselectedTool("circle")}
+        className={
+          selectedTool === "circle" ? "text-amber-200 p-1 rounded" : ""
+        }
       >
         <Circle />
       </div>
       <div
-      onClick={() => setselectedTool("pen")}
-      className={selectedTool === "pen" ? "text-amber-200 p-1 rounded" : ""}
+        onClick={() => setselectedTool("pen")}
+        className={selectedTool === "pen" ? "text-amber-200 p-1 rounded" : ""}
       >
         <PenLine />
       </div>

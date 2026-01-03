@@ -1,7 +1,5 @@
 import axios from "axios";
 import { HTTP_BACKEND } from "@/lib/config";
-import { useEffect } from "react";
-import { useState } from "react";
 
 type Shape =
   | {
@@ -19,10 +17,7 @@ type Shape =
     }
   | {
       type: "pen";
-      startX: number;
-      startY: number;
-      endX: number;
-      endY: number;
+      points:{x:number,y:number}[];
     };
 
 function clearCanvas(
@@ -46,10 +41,26 @@ function clearCanvas(
       ctx.strokeStyle = "red";
       ctx.fillStyle = "rgba(255,0,0,0.3)";
       ctx.beginPath();
-      ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, 2 * Math.PI);
+      ctx.arc(shape.centerX, shape.centerY, Math.abs(shape.radius), 0, 2 * Math.PI);
       ctx.fill();
       ctx.stroke();
       ctx.closePath();
+    }
+
+    if(shape.type ==="pen"){
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      shape.points.forEach((point,index)=>{
+        if(index===0){
+          ctx.moveTo(point.x,point.y);
+        }else{
+          ctx.lineTo(point.x,point.y);
+        }
+      })
+      ctx.stroke();
+      ctx.closePath();
+
     }
   });
 }
@@ -59,7 +70,6 @@ async function getExistingShapes(roomId: string) {
   const messages = res.data.messages;
   const shapes = messages.map((x: { message: string }) => {
     const messageData = JSON.parse(x.message);
-
     return messageData.shape;
   });
   console.log("Existing Shapes: ", shapes);
@@ -75,13 +85,17 @@ export async function initDraw(
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  //const existingShapes: Shape[] = await getExistingShapes(roomId);
   const existingShapes: Shape[] = await getExistingShapes(roomId);
 
   socket.onmessage = (event) => {
     const parsedData = JSON.parse(event.data);
+
     if (parsedData.type === "chat") {
-      const parsedShape = JSON.parse(parsedData.message);
+      const parsedMessage = JSON.parse(parsedData.message);
+      const parsedShape = parsedMessage.shape;
+      if (!parsedShape) {
+        return;
+      }
       existingShapes.push(parsedShape);
       clearCanvas(existingShapes, ctx, canvas);
     }
@@ -92,20 +106,29 @@ export async function initDraw(
   let clicked = false;
   let startX = 0;
   let startY = 0;
+  let currentPoints: {x:number,y:number}[] = [];
 
-  canvas.addEventListener("mousedown", (e) => {
+  const handleMouseDown = (e:MouseEvent)=> {
     clicked = true;
     startX = e.clientX;
     startY = e.clientY;
-  });
+    if(window.selectedShape === "pen"){
+      currentPoints = [{x:startX,y:startY}];
+    }
+  };
 
-  canvas.addEventListener("mouseup", (e) => {
+
+  
+
+  const handleMouseUp =(e:MouseEvent)=> {
     clicked = false;
     console.log("Mouse Up at ", e.clientX, e.clientY);
     const height = e.clientY - startY;
     const width = e.clientX - startX;
+    // @ts-ignore
     const selectedShape = window.selectedShape;
-    let shape: Shape | null;
+    let shape: Shape | null = null;
+
     if (selectedShape === "rectangle") {
       shape = {
         type: "rectangle",
@@ -115,13 +138,21 @@ export async function initDraw(
         height: height,
       };
     } else if (selectedShape === "circle") {
-      const radius = Math.max(width, height) / 2;
+      // FIX: Use Math.abs() so dragging Left/Up works
+      const radius = Math.max(Math.abs(width), Math.abs(height)) / 2;
       shape = {
         type: "circle",
-        centerX: startX + radius,
-        centerY: startY + radius,
-        radius: Math.max(width, height) / 2,
+        centerX: startX + width / 2, // Center is the midpoint of the drag
+        centerY: startY + height / 2,
+        radius: radius,
       };
+    } else if(selectedShape ==="pen"){
+      shape = {
+        type:"pen",
+        points:currentPoints
+      }
+      currentPoints = []
+
     }
 
     if (!shape) {
@@ -136,9 +167,9 @@ export async function initDraw(
         message: JSON.stringify({ shape }),
       })
     );
-  });
+  };
 
-  canvas.addEventListener("mousemove", (e) => {
+ const handleMouseMove =(e:MouseEvent)=> {
     if (clicked) {
       const width = e.clientX - startX;
       const height = e.clientY - startY;
@@ -147,26 +178,51 @@ export async function initDraw(
       ctx.strokeStyle = "red";
       ctx.fillStyle = "rgba(255,0,0,0.3)";
 
+      // @ts-ignore
       const selectedShape = window.selectedShape;
       if (selectedShape === "rectangle") {
         ctx.fillRect(startX, startY, width, height);
         ctx.strokeRect(startX, startY, width, height);
       } else if (selectedShape === "circle") {
-        const radius = Math.max(width, height) / 2;
-       const centerX = startX + radius;
-        const centerY = startY + radius;
-        
-        
+        // FIX: Match the logic from mouseup exactly
+        const radius = Math.max(Math.abs(width), Math.abs(height)) / 2;
+        const centerX = startX + width / 2;
+        const centerY = startY + height / 2;
+
         ctx.beginPath();
-        ctx.arc(centerX, centerY, Math.abs(radius), 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
         ctx.closePath();
-      } else if (selectedShape === "pen") {
+      } else if(selectedShape === "pen"){
+        currentPoints.push({x:e.clientX,y:e.clientY});
+        ctx.beginPath();
+        ctx.strokeStyle = "red";
         ctx.lineWidth = 2;
-        ctx.lineTo(e.clientX, e.clientY);
-        ctx.stroke();
+        currentPoints.forEach((point,index)=>{
+          if(index===0){
+            ctx.moveTo(point.x,point.y);
+          }else{
+            ctx.lineTo(point.x,point.y);
+          }
+        })
+        ctx.stroke()
+        ctx.closePath()
+
+        
+        
       }
     }
-  });
+  };
+
+  canvas.addEventListener("mousedown", handleMouseDown);
+  canvas.addEventListener("mouseup", handleMouseUp);
+  canvas.addEventListener("mousemove", handleMouseMove);
+
+
+  return () => {
+    canvas.removeEventListener("mousedown", handleMouseDown);
+    canvas.removeEventListener("mouseup", handleMouseUp);
+    canvas.removeEventListener("mousemove", handleMouseMove);
+  };
 }
