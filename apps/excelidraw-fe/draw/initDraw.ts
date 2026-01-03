@@ -16,6 +16,13 @@ type Shape =
       centerX: number;
       centerY: number;
       radius: number;
+    }
+  | {
+      type: "pen";
+      startX: number;
+      startY: number;
+      endX: number;
+      endY: number;
     };
 
 function clearCanvas(
@@ -33,7 +40,16 @@ function clearCanvas(
       ctx.fillStyle = "rgba(255,0,0,0.3)";
       ctx.fillRect(shape.x, shape.y, shape.width, shape.height);
       ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
-    
+    }
+
+    if (shape.type === "circle") {
+      ctx.strokeStyle = "red";
+      ctx.fillStyle = "rgba(255,0,0,0.3)";
+      ctx.beginPath();
+      ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+      ctx.closePath();
     }
   });
 }
@@ -86,13 +102,31 @@ export async function initDraw(
   canvas.addEventListener("mouseup", (e) => {
     clicked = false;
     console.log("Mouse Up at ", e.clientX, e.clientY);
-    const shape: Shape = {
-      type: "rectangle",
-      x: startX,
-      y: startY,
-      width: e.clientX - startX,
-      height: e.clientY - startY,
-    };
+    const height = e.clientY - startY;
+    const width = e.clientX - startX;
+    const selectedShape = window.selectedShape;
+    let shape: Shape | null;
+    if (selectedShape === "rectangle") {
+      shape = {
+        type: "rectangle",
+        x: startX,
+        y: startY,
+        width: width,
+        height: height,
+      };
+    } else if (selectedShape === "circle") {
+      const radius = Math.max(width, height) / 2;
+      shape = {
+        type: "circle",
+        centerX: startX + radius,
+        centerY: startY + radius,
+        radius: Math.max(width, height) / 2,
+      };
+    }
+
+    if (!shape) {
+      return;
+    }
     existingShapes.push(shape);
 
     socket.send(
@@ -110,11 +144,29 @@ export async function initDraw(
       const height = e.clientY - startY;
 
       clearCanvas(existingShapes, ctx, canvas);
-
-        ctx.strokeStyle = "red";
+      ctx.strokeStyle = "red";
       ctx.fillStyle = "rgba(255,0,0,0.3)";
-       ctx.fillRect(startX, startY, width, height);
-      ctx.strokeRect(startX, startY, width, height);
+
+      const selectedShape = window.selectedShape;
+      if (selectedShape === "rectangle") {
+        ctx.fillRect(startX, startY, width, height);
+        ctx.strokeRect(startX, startY, width, height);
+      } else if (selectedShape === "circle") {
+        const radius = Math.max(width, height) / 2;
+       const centerX = startX + radius;
+        const centerY = startY + radius;
+        
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, Math.abs(radius), 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.closePath();
+      } else if (selectedShape === "pen") {
+        ctx.lineWidth = 2;
+        ctx.lineTo(e.clientX, e.clientY);
+        ctx.stroke();
+      }
     }
   });
 }

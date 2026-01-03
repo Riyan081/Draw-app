@@ -1,25 +1,67 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 import { initDraw } from "@/draw/initDraw";
+import { useState } from "react";
+import { Square } from "lucide-react";
+import { Circle } from "lucide-react";
+import { PenLine } from "lucide-react";
+type tools = "rectangle" | "circle" | "pen";
 
 const Canvas = ({ roomId, socket }: { roomId: string; socket: WebSocket }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [selectedTool, setselectedTool] = useState<tools>("rectangle");
+
+
+  useEffect(()=>{
+    window.selectedShape = selectedTool;
+  },[selectedTool])
 
   useEffect(() => {
     if (canvasRef.current) {
+      
       initDraw(canvasRef.current, roomId, socket);
     }
   }, [canvasRef]);
 
   return (
-    <div>
-      <canvas ref={canvasRef} width={1550} height={700} />
-      <div className="absolute top-2 left-2 text-white  flex gap-4">
-        <div className="bg-amber-50 text-black">Rect</div>
-        <div className="bg-amber-50 text-black ">Circle</div>
-      </div>
+    <div className="relative overflow-hidden ">
+      <TopBar selectedTool={selectedTool} setselectedTool={setselectedTool} />
+      <canvas ref={canvasRef} width={1550} height={695} />
     </div>
   );
 };
 
 export default Canvas;
+
+function TopBar({
+  selectedTool,
+  setselectedTool,
+}: {
+  selectedTool: tools;
+  setselectedTool: (s: tools) => void;
+}) {
+  return (
+    <div className=" gap-5 fixed top-0 left-0 w-full h-12 flex items-center space-x-4 p-2 z-10">
+      <div 
+      onClick={() => setselectedTool("rectangle")}
+      className={selectedTool === "rectangle" ? "text-amber-200 p-1 rounded" : ""}
+      
+      >
+        <Square />
+      </div>
+
+      <div
+      onClick={() => setselectedTool("circle")}
+      className={selectedTool === "circle" ? "text-amber-200 p-1 rounded" : ""}
+      >
+        <Circle />
+      </div>
+      <div
+      onClick={() => setselectedTool("pen")}
+      className={selectedTool === "pen" ? "text-amber-200 p-1 rounded" : ""}
+      >
+        <PenLine />
+      </div>
+    </div>
+  );
+}
