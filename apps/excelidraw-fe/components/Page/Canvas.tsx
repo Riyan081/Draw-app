@@ -5,7 +5,9 @@ import { useState } from "react";
 import { Square } from "lucide-react";
 import { Circle } from "lucide-react";
 import { PenLine } from "lucide-react";
-type tools = "rectangle" | "circle" | "pen";
+import { Minus } from "lucide-react";
+import { Diamond } from 'lucide-react';
+type tools = "rectangle" | "circle" | "pen" | "line" | "select" | "text" | "diamond";
 
 const Canvas = ({ roomId, socket }: { roomId: string; socket: WebSocket }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -25,11 +27,11 @@ const Canvas = ({ roomId, socket }: { roomId: string; socket: WebSocket }) => {
     };
     startDrawing();
 
-    return ()=>{
-      if(cleanupFunc){
+    return () => {
+      if (cleanupFunc) {
         cleanupFunc();
       }
-    }
+    };
   }, [canvasRef]);
 
   return (
@@ -73,6 +75,20 @@ function TopBar({
         className={selectedTool === "pen" ? "text-amber-200 p-1 rounded" : ""}
       >
         <PenLine />
+      </div>
+      <div 
+      onClick={()=>setselectedTool("line")}
+      className={selectedTool==="line"?"text-amber-200 p-1 rounded":""}
+      
+      >
+        <Minus />
+      </div>
+
+      <div
+      onClick={()=>setselectedTool("diamond")}
+      className={selectedTool==="diamond"?"text-amber-200 p-1 rounded":""}
+      >
+        <Diamond />
       </div>
     </div>
   );

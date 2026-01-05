@@ -17,7 +17,21 @@ type Shape =
     }
   | {
       type: "pen";
-      points:{x:number,y:number}[];
+      points: { x: number; y: number }[];
+    }
+  | {
+      type: "line";
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+    }|
+    {
+      type:"diamond";
+      centerX:number;
+      centerY:number;
+      halfWidth:number;
+      halfHeight:number;
     };
 
 function clearCanvas(
@@ -41,26 +55,52 @@ function clearCanvas(
       ctx.strokeStyle = "red";
       ctx.fillStyle = "rgba(255,0,0,0.3)";
       ctx.beginPath();
-      ctx.arc(shape.centerX, shape.centerY, Math.abs(shape.radius), 0, 2 * Math.PI);
+      ctx.arc(
+        shape.centerX,
+        shape.centerY,
+        Math.abs(shape.radius),
+        0,
+        2 * Math.PI
+      );
       ctx.fill();
       ctx.stroke();
       ctx.closePath();
     }
 
-    if(shape.type ==="pen"){
+    if (shape.type === "pen") {
       ctx.strokeStyle = "red";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      shape.points.forEach((point,index)=>{
-        if(index===0){
-          ctx.moveTo(point.x,point.y);
-        }else{
-          ctx.lineTo(point.x,point.y);
+      shape.points.forEach((point, index) => {
+        if (index === 0) {
+          ctx.moveTo(point.x, point.y);
+        } else {
+          ctx.lineTo(point.x, point.y);
         }
-      })
+      });
       ctx.stroke();
       ctx.closePath();
-
+    }
+    if (shape.type == "line") {
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(shape.x1, shape.y1);
+      ctx.lineTo(shape.x2, shape.y2);
+      ctx.stroke();
+      ctx.closePath();
+    } 
+    if(shape.type==="diamond"){
+      ctx.strokeStyle="red";
+      ctx.fillStyle="rgba(255,0,0,0.3)";
+      ctx.beginPath();
+      ctx.moveTo(shape.centerX,shape.centerY - shape.halfHeight);
+      ctx.lineTo(shape.centerX + shape.halfWidth, shape.centerY);
+      ctx.lineTo(shape.centerX, shape.centerY + shape.halfHeight);
+      ctx.lineTo(shape.centerX - shape.halfWidth, shape.centerY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     }
   });
 }
@@ -86,6 +126,7 @@ export async function initDraw(
   if (!ctx) return;
 
   const existingShapes: Shape[] = await getExistingShapes(roomId);
+  let redoStack: Shape[] = [];
 
   socket.onmessage = (event) => {
     const parsedData = JSON.parse(event.data);
@@ -106,21 +147,65 @@ export async function initDraw(
   let clicked = false;
   let startX = 0;
   let startY = 0;
-  let currentPoints: {x:number,y:number}[] = [];
+  let currentPoints: { x: number; y: number }[] = [];
 
-  const handleMouseDown = (e:MouseEvent)=> {
+
+  const undo = ()=>{
+    if(existingShapes.length===0){
+      return;
+    }
+
+    const removedShape = existingShapes.pop();
+    if(removedShape){
+      redoStack.push(removedShape);
+       clearCanvas(existingShapes,ctx,canvas);
+    }
+  }
+
+  const redo = ()=>{
+    if(redoStack.length===0){
+      return;
+    }
+
+    const restoredShape = redoStack.pop();
+    if(restoredShape){
+      existingShapes.push(restoredShape); 
+      clearCanvas(existingShapes,ctx,canvas);
+
+    }
+  }
+
+
+  const handleKeyDown = (e:KeyboardEvent)=>{
+    const isCtrl = e.ctrlKey || e.metaKey;
+
+    if(isCtrl && e.key ==="z" || isCtrl && e.key==="Z"){
+      e.preventDefault();
+      undo();
+    }
+
+    if(isCtrl && e.key==="y" || isCtrl && (e.key==="Y")){
+      e.preventDefault();
+      redo();
+    }
+  }
+
+
+
+
+  const handleMouseDown = (e: MouseEvent) => {
     clicked = true;
     startX = e.clientX;
     startY = e.clientY;
-    if(window.selectedShape === "pen"){
-      currentPoints = [{x:startX,y:startY}];
+    //  @ts-ignore
+    if (window.selectedShape === "pen") {
+      currentPoints = [{ x: startX, y: startY }];
     }
   };
 
 
-  
 
-  const handleMouseUp =(e:MouseEvent)=> {
+  const handleMouseUp = (e: MouseEvent) => {
     clicked = false;
     console.log("Mouse Up at ", e.clientX, e.clientY);
     const height = e.clientY - startY;
@@ -146,13 +231,32 @@ export async function initDraw(
         centerY: startY + height / 2,
         radius: radius,
       };
-    } else if(selectedShape ==="pen"){
+    } else if (selectedShape === "pen") {
       shape = {
-        type:"pen",
-        points:currentPoints
-      }
-      currentPoints = []
-
+        type: "pen",
+        points: currentPoints,
+      };
+      currentPoints = [];
+    } else if (selectedShape === "line") {
+      shape = {
+        type: "line",
+        x1: startX,
+        y1: startY,
+        x2: e.clientX,
+        y2: e.clientY,
+      };
+    } else if(selectedShape==="diamond"){
+      const centerX = startX + width/2;
+      const centerY = startY + height/2;
+      const halfWidth = Math.abs(width)/2;
+      const halfHeight = Math.abs(height)/2;
+      shape={
+        type:"diamond",
+        centerX,
+        centerY,
+        halfWidth:halfWidth,
+        halfHeight:halfHeight
+      };
     }
 
     if (!shape) {
@@ -167,9 +271,11 @@ export async function initDraw(
         message: JSON.stringify({ shape }),
       })
     );
+
+    redoStack = []
   };
 
- const handleMouseMove =(e:MouseEvent)=> {
+  const handleMouseMove = (e: MouseEvent) => {
     if (clicked) {
       const width = e.clientX - startX;
       const height = e.clientY - startY;
@@ -194,33 +300,56 @@ export async function initDraw(
         ctx.fill();
         ctx.stroke();
         ctx.closePath();
-      } else if(selectedShape === "pen"){
-        currentPoints.push({x:e.clientX,y:e.clientY});
+      } else if (selectedShape === "pen") {
+        currentPoints.push({ x: e.clientX, y: e.clientY });
         ctx.beginPath();
         ctx.strokeStyle = "red";
         ctx.lineWidth = 2;
-        currentPoints.forEach((point,index)=>{
-          if(index===0){
-            ctx.moveTo(point.x,point.y);
-          }else{
-            ctx.lineTo(point.x,point.y);
+        currentPoints.forEach((point, index) => {
+          if (index === 0) {
+            ctx.moveTo(point.x, point.y);
+          } else {
+            ctx.lineTo(point.x, point.y);
           }
-        })
-        ctx.stroke()
-        ctx.closePath()
-
+        });
+        ctx.stroke();
+        ctx.closePath();
+      } else if (selectedShape === "line") {
+        // Future implementation for line tool
+        ctx.beginPath();
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 2;
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(e.clientX, e.clientY);
+        ctx.stroke();
+        ctx.closePath();
+      } else if(selectedShape==="diamond"){
+        // Future implementation for diamond tool
+        const centerX = startX + width/2;
+        const centerY = startY + height/2;
+        const halfWidth = Math.abs(width)/2;
+        const halfHeight = Math.abs(height)/2;
+        ctx.beginPath();
+        ctx.moveTo(centerX,centerY-halfHeight);
+        ctx.lineTo(centerX+halfWidth,centerY);
+        ctx.lineTo(centerX,centerY+halfHeight);
+        ctx.lineTo(centerX-halfWidth,centerY);
         
-        
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
       }
     }
   };
+
+  window.addEventListener("keydown",handleKeyDown);
 
   canvas.addEventListener("mousedown", handleMouseDown);
   canvas.addEventListener("mouseup", handleMouseUp);
   canvas.addEventListener("mousemove", handleMouseMove);
 
-
   return () => {
+    window.removeEventListener("keydown",handleKeyDown);
     canvas.removeEventListener("mousedown", handleMouseDown);
     canvas.removeEventListener("mouseup", handleMouseUp);
     canvas.removeEventListener("mousemove", handleMouseMove);
