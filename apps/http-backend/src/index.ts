@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 app.use(cookieparser());
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
 }));
 
@@ -18,6 +18,7 @@ app.use(cors({
 app.use("/user", userRoute);
 
 
-app.listen(3001,()=>{
-    console.log("Server started on port 3001");
+const PORT = process.env.PORT || 3001;
+app.listen(PORT,()=>{
+    console.log(`Server started on port ${PORT}`);
 });

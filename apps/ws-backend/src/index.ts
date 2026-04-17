@@ -5,7 +5,9 @@ import type { WebSocket as WsWebSocket } from "ws";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
 
-const wss = new WebSocketServer({ port: 8080 });
+const WS_PORT = Number(process.env.PORT) || 8080;
+const wss = new WebSocketServer({ port: WS_PORT });
+console.log(`WebSocket server started on port ${WS_PORT}`);
 
 interface User{
   ws: WsWebSocket;
