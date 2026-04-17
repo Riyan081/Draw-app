@@ -4,20 +4,68 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { Label } from '../ui/label';
-import { Pencil } from 'lucide-react';
+import { Pencil, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import { HTTP_BACKEND } from '@/lib/config';
 
 const AuthPage = ({isSignin}:{isSignin: boolean}) => {
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const router = useRouter();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSignin) {
-            console.log("Signin:", { email, password });
-        } else {
-            console.log("Signup:", { email, password, confirmPassword });
+        setError("");
+
+        if (!isSignin && password !== confirmPassword) {
+            setError("Passwords do not match");
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            if (isSignin) {
+                const res = await axios.post(`${HTTP_BACKEND}/user/signin`, {
+                    email,
+                    password,
+                }, { withCredentials: true });
+
+                if (res.data.success) {
+                    // Store token in localStorage for WebSocket usage
+                    if (res.data.token) {
+                        localStorage.setItem('token', res.data.token);
+                    }
+                    router.push('/dashboard');
+                }
+            } else {
+                const res = await axios.post(`${HTTP_BACKEND}/user/signup`, {
+                    email,
+                    password,
+                    name,
+                }, { withCredentials: true });
+
+                if (res.data.success) {
+                    if (res.data.token) {
+                        localStorage.setItem('token', res.data.token);
+                    }
+                    router.push('/dashboard');
+                }
+            }
+        } catch (err: any) {
+            if (err.response?.data?.error) {
+                setError(err.response.data.error);
+            } else {
+                setError("Something went wrong. Please try again.");
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -37,7 +85,28 @@ const AuthPage = ({isSignin}:{isSignin: boolean}) => {
         </div>
 
         <div className="border border-amber-80 rounded-2xl w-[30vw] p-8">
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-body">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
+            {!isSignin && (
+              <div className="space-y-4">
+                <Label htmlFor="name" className="font-body">Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="border-[#262C36] p-2 text-[#B3AC98] font-body placeholder:text-[#B3AC98]"
+                  required
+                />
+              </div>
+            )}
+
             <div className="space-y-4">
               <Label htmlFor="email" className="font-body">Email</Label>
               <Input
@@ -77,8 +146,20 @@ const AuthPage = ({isSignin}:{isSignin: boolean}) => {
               />
             </div>)}
 
-            <Button type="submit" variant="sketch" className="w-full bg-[#F06E42] hover:bg-[#F06E42] hover:scale-102 text-black ">
-             {isSignin ? "Sign In" : "Create Account"}
+            <Button 
+              type="submit" 
+              variant="sketch" 
+              className="w-full bg-[#F06E42] hover:bg-[#F06E42] hover:scale-102 text-black"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isSignin ? "Signing in..." : "Creating account..."}
+                </span>
+              ) : (
+                isSignin ? "Sign In" : "Create Account"
+              )}
             </Button>
           </form>
 

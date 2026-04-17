@@ -3,7 +3,9 @@ import AuthPage from '../../components/Auth/AuthPage';
 
 const page = () => {
   return (
-    <AuthPage isSignin={false} />
+    <div className="flex min-h-screen items-center justify-center bg-[#14181F] font-sans text-fuchsia-100">
+      <AuthPage isSignin={false} />
+    </div>
   )
 }
 

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
+import Link from "next/link";
 
 const Header = () => {
   return (
@@ -25,12 +26,16 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
-            Sign In
-          </Button>
-          <Button variant="sketch" size="sm">
-            Start Drawing
-          </Button>
+          <Link href="/signin">
+            <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
+              Sign In
+            </Button>
+          </Link>
+          <Link href="/dashboard">
+            <Button variant="sketch" size="sm">
+              Start Drawing
+            </Button>
+          </Link>
         </div>
       </div>
     </header>

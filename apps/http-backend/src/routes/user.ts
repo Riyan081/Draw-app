@@ -37,11 +37,17 @@ userRoute.post("/signup", async (req: Request, res: Response): Promise<any> => {
         });
 
         const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '8d' });
-        res.cookie("token", token, { expires: new Date(Date.now() + 8 * 24 *3600000) });
+        res.cookie("token", token, { 
+            expires: new Date(Date.now() + 8 * 24 * 3600000),
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
 
         res.status(201).json({
             message: "User created successfully",
             success: true,
+            token,
             user:{
                 id: user.id,
                 email: user.email,
@@ -95,6 +101,7 @@ userRoute.post("/signin", async (req: Request, res: Response): Promise<any> => {
         res.status(200).json({
             message: "Login successful",
             success: true,
+            token,
             user: {
                 id: user.id,
                 email: user.email,
