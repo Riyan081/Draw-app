@@ -5,19 +5,36 @@ import { useState } from "react";
 import { Square } from "lucide-react";
 import { Circle } from "lucide-react";
 import { PenLine } from "lucide-react";
+import { Hand } from "lucide-react";
 import { Minus } from "lucide-react";
 import { Diamond } from 'lucide-react';
-type tools = "rectangle" | "circle" | "pen" | "line" | "select" | "text" | "diamond";
+type tools = "rectangle" | "circle" | "pen" | "line" | "select" | "text" | "diamond" | "hand";
 
 const Canvas = ({ roomId, socket }: { roomId: string; socket: WebSocket }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedTool, setselectedTool] = useState<tools>("rectangle");
 
+  const [canvasSize,setCanvasSize] = useState({
+    width:window.innerWidth,
+    height:window.innerHeight
+  })
+
   useEffect(() => {
     //@ts-ignore
     window.selectedShape = selectedTool;
   }, [selectedTool]);
+  useEffect(()=>{
+   
+    const handleResize=()=>{
+      setCanvasSize({
+        width:window.innerWidth,  
+        height:window.innerHeight
+      })
+    }
 
+    window.addEventListener("resize",handleResize);
+    return ()=> window.removeEventListener("resize",handleResize);
+  })
   useEffect(() => {
     let cleanupFunc: (() => void) | undefined;
     const startDrawing = async () => {
@@ -32,17 +49,19 @@ const Canvas = ({ roomId, socket }: { roomId: string; socket: WebSocket }) => {
         cleanupFunc();
       }
     };
-  }, [canvasRef]);
+  }, [canvasRef,canvasSize]);
 
   return (
     <div className="relative overflow-hidden ">
       <TopBar selectedTool={selectedTool} setselectedTool={setselectedTool} />
-      <canvas ref={canvasRef} width={1550} height={695} />
+      <canvas ref={canvasRef} width={canvasSize.width} height={canvasSize.height} className="touch-none"/>
     </div>
   );
 };
 
 export default Canvas;
+
+
 
 function TopBar({
   selectedTool,
@@ -90,6 +109,13 @@ function TopBar({
       >
         <Diamond />
       </div>
+      <div
+        onClick={() => setselectedTool("hand")}
+        className={selectedTool === "hand" ? "text-amber-200 p-1 rounded bg-gray-700" : "p-1"}
+      >
+        <Hand />
+      </div>
+      
     </div>
   );
 }
