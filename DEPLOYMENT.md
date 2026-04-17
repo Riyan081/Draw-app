@@ -109,7 +109,7 @@ nano .env
 
 A text editor opens. Paste this content:
 ```env
-DATABASE_URL='postgresql://neondb_owner:npg_AyTuYv7KNh1c@ep-green-band-ad27eipm-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+DATABASE_URL='postgresql://<DB_USER>:<DB_PASSWORD>@<NEON_HOST>/neondb?sslmode=require&channel_binding=require'
 JWT_SECRET=your-strong-secret-here-change-this
 FRONTEND_URL=http://draw.riyansayyad.me
 ```
@@ -135,7 +135,7 @@ nano packages/db/.env
 
 Paste this:
 ```env
-DATABASE_URL='postgresql://neondb_owner:npg_AyTuYv7KNh1c@ep-green-band-ad27eipm-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+DATABASE_URL='postgresql://<DB_USER>:<DB_PASSWORD>@<NEON_HOST>/neondb?sslmode=require&channel_binding=require'
 ```
 
 Save and exit: `Ctrl + O` → `Enter` → `Ctrl + X`
