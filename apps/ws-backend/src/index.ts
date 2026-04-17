@@ -100,7 +100,8 @@ wss.on("connection", function connection(ws, request) {
           user.ws.send(JSON.stringify({
             type:"chat",
             roomId: room,
-            message
+            message,
+            userId: userId
           }))
         }
       })
