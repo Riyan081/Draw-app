@@ -83,13 +83,17 @@ wss.on("connection", function connection(ws, request) {
       const room = parsedData.roomId;
       const message = parsedData.message;
       
-      await prismaClient.chat.create({
-        data:{
-          roomId: Number(room),
-          userId: userId,
-          message: message
-        }
-      })
+      try {
+        await prismaClient.chat.create({
+          data:{
+            roomId: Number(room),
+            userId: userId,
+            message: message
+          }
+        })
+      } catch(e) {
+        console.error("Failed to save chat to DB:", e);
+      }
 
       users.forEach(user=>{
         if(user.rooms.includes(room)){
@@ -97,11 +101,27 @@ wss.on("connection", function connection(ws, request) {
             type:"chat",
             roomId: room,
             message
-            
           }))
         }
       })
+    }
 
+    // Live drawing preview — broadcast to others WITHOUT saving to DB
+    if(parsedData.type === "draw_preview"){
+      const room = parsedData.roomId;
+      const shape = parsedData.shape;
+
+      users.forEach(user=>{
+        // Send to everyone in the room EXCEPT the sender
+        if(user.rooms.includes(room) && user.ws !== ws){
+          user.ws.send(JSON.stringify({
+            type: "draw_preview",
+            roomId: room,
+            shape,
+            userId: userId
+          }))
+        }
+      })
     }
   });
 });

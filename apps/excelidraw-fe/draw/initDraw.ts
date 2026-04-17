@@ -34,6 +34,59 @@ type Shape =
       halfHeight:number;
     };
 
+function drawShape(shape: Shape, ctx: CanvasRenderingContext2D, strokeColor: string, fillColor: string) {
+  if (shape.type === "rectangle") {
+    ctx.strokeStyle = strokeColor;
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(shape.x, shape.y, shape.width, shape.height);
+    ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+  }
+  if (shape.type === "circle") {
+    ctx.strokeStyle = strokeColor;
+    ctx.fillStyle = fillColor;
+    ctx.beginPath();
+    ctx.arc(shape.centerX, shape.centerY, Math.abs(shape.radius), 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+  }
+  if (shape.type === "pen") {
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    shape.points.forEach((point, index) => {
+      if (index === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    });
+    ctx.stroke();
+    ctx.closePath();
+  }
+  if (shape.type === "line") {
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(shape.x1, shape.y1);
+    ctx.lineTo(shape.x2, shape.y2);
+    ctx.stroke();
+    ctx.closePath();
+  }
+  if (shape.type === "diamond") {
+    ctx.strokeStyle = strokeColor;
+    ctx.fillStyle = fillColor;
+    ctx.beginPath();
+    ctx.moveTo(shape.centerX, shape.centerY - shape.halfHeight);
+    ctx.lineTo(shape.centerX + shape.halfWidth, shape.centerY);
+    ctx.lineTo(shape.centerX, shape.centerY + shape.halfHeight);
+    ctx.lineTo(shape.centerX - shape.halfWidth, shape.centerY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
+// Map of userId -> their current preview shape
+const remotePreviews: Map<string, Shape> = new Map();
+
 function clearCanvas(
   existingShapes: Shape[],
   ctx: CanvasRenderingContext2D,
@@ -43,65 +96,14 @@ function clearCanvas(
   ctx.fillStyle = "rgba(0,0,0)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  existingShapes.map((shape) => {
-    if (shape.type === "rectangle") {
-      ctx.strokeStyle = "red";
-      ctx.fillStyle = "rgba(255,0,0,0.3)";
-      ctx.fillRect(shape.x, shape.y, shape.width, shape.height);
-      ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
-    }
+  // Draw all saved shapes in red
+  existingShapes.forEach((shape) => {
+    drawShape(shape, ctx, "red", "rgba(255,0,0,0.3)");
+  });
 
-    if (shape.type === "circle") {
-      ctx.strokeStyle = "red";
-      ctx.fillStyle = "rgba(255,0,0,0.3)";
-      ctx.beginPath();
-      ctx.arc(
-        shape.centerX,
-        shape.centerY,
-        Math.abs(shape.radius),
-        0,
-        2 * Math.PI
-      );
-      ctx.fill();
-      ctx.stroke();
-      ctx.closePath();
-    }
-
-    if (shape.type === "pen") {
-      ctx.strokeStyle = "red";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      shape.points.forEach((point, index) => {
-        if (index === 0) {
-          ctx.moveTo(point.x, point.y);
-        } else {
-          ctx.lineTo(point.x, point.y);
-        }
-      });
-      ctx.stroke();
-      ctx.closePath();
-    }
-    if (shape.type == "line") {
-      ctx.strokeStyle = "red";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(shape.x1, shape.y1);
-      ctx.lineTo(shape.x2, shape.y2);
-      ctx.stroke();
-      ctx.closePath();
-    } 
-    if(shape.type==="diamond"){
-      ctx.strokeStyle="red";
-      ctx.fillStyle="rgba(255,0,0,0.3)";
-      ctx.beginPath();
-      ctx.moveTo(shape.centerX,shape.centerY - shape.halfHeight);
-      ctx.lineTo(shape.centerX + shape.halfWidth, shape.centerY);
-      ctx.lineTo(shape.centerX, shape.centerY + shape.halfHeight);
-      ctx.lineTo(shape.centerX - shape.halfWidth, shape.centerY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    }
+  // Draw remote users' live previews in blue (so you can tell them apart)
+  remotePreviews.forEach((shape) => {
+    drawShape(shape, ctx, "#4A9EFF", "rgba(74,158,255,0.2)");
   });
 }
 
@@ -128,6 +130,10 @@ export async function initDraw(
   const existingShapes: Shape[] = await getExistingShapes(roomId);
   let redoStack: Shape[] = [];
 
+  // Throttle helper — limits how often previews are sent (every 50ms)
+  let lastPreviewSent = 0;
+  const THROTTLE_MS = 50;
+
   socket.onmessage = (event) => {
     const parsedData = JSON.parse(event.data);
 
@@ -137,7 +143,21 @@ export async function initDraw(
       if (!parsedShape) {
         return;
       }
+      // Remove this user's preview since they finished drawing
+      if (parsedData.userId) {
+        remotePreviews.delete(parsedData.userId);
+      }
       existingShapes.push(parsedShape);
+      clearCanvas(existingShapes, ctx, canvas);
+    }
+
+    // Live preview from another user
+    if (parsedData.type === "draw_preview") {
+      if (parsedData.shape) {
+        remotePreviews.set(parsedData.userId, parsedData.shape);
+      } else {
+        remotePreviews.delete(parsedData.userId);
+      }
       clearCanvas(existingShapes, ctx, canvas);
     }
   };
@@ -280,64 +300,47 @@ export async function initDraw(
       const width = e.clientX - startX;
       const height = e.clientY - startY;
 
-      clearCanvas(existingShapes, ctx, canvas);
-      ctx.strokeStyle = "red";
-      ctx.fillStyle = "rgba(255,0,0,0.3)";
-
       // @ts-ignore
       const selectedShape = window.selectedShape;
-      if (selectedShape === "rectangle") {
-        ctx.fillRect(startX, startY, width, height);
-        ctx.strokeRect(startX, startY, width, height);
-      } else if (selectedShape === "circle") {
-        // FIX: Match the logic from mouseup exactly
-        const radius = Math.max(Math.abs(width), Math.abs(height)) / 2;
-        const centerX = startX + width / 2;
-        const centerY = startY + height / 2;
 
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        ctx.closePath();
-      } else if (selectedShape === "pen") {
+      // Build the preview shape
+      let previewShape: Shape | null = null;
+
+      if (selectedShape === "pen") {
         currentPoints.push({ x: e.clientX, y: e.clientY });
-        ctx.beginPath();
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 2;
-        currentPoints.forEach((point, index) => {
-          if (index === 0) {
-            ctx.moveTo(point.x, point.y);
-          } else {
-            ctx.lineTo(point.x, point.y);
-          }
-        });
-        ctx.stroke();
-        ctx.closePath();
+        previewShape = { type: "pen", points: [...currentPoints] };
+      } else if (selectedShape === "rectangle") {
+        previewShape = { type: "rectangle", x: startX, y: startY, width, height };
+      } else if (selectedShape === "circle") {
+        const radius = Math.max(Math.abs(width), Math.abs(height)) / 2;
+        previewShape = { type: "circle", centerX: startX + width / 2, centerY: startY + height / 2, radius };
       } else if (selectedShape === "line") {
-        // Future implementation for line tool
-        ctx.beginPath();
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 2;
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(e.clientX, e.clientY);
-        ctx.stroke();
-        ctx.closePath();
-      } else if(selectedShape==="diamond"){
-        // Future implementation for diamond tool
-        const centerX = startX + width/2;
-        const centerY = startY + height/2;
-        const halfWidth = Math.abs(width)/2;
-        const halfHeight = Math.abs(height)/2;
-        ctx.beginPath();
-        ctx.moveTo(centerX,centerY-halfHeight);
-        ctx.lineTo(centerX+halfWidth,centerY);
-        ctx.lineTo(centerX,centerY+halfHeight);
-        ctx.lineTo(centerX-halfWidth,centerY);
-        
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        previewShape = { type: "line", x1: startX, y1: startY, x2: e.clientX, y2: e.clientY };
+      } else if (selectedShape === "diamond") {
+        previewShape = {
+          type: "diamond",
+          centerX: startX + width / 2,
+          centerY: startY + height / 2,
+          halfWidth: Math.abs(width) / 2,
+          halfHeight: Math.abs(height) / 2,
+        };
+      }
+
+      // Redraw canvas with existing shapes + local preview
+      clearCanvas(existingShapes, ctx, canvas);
+      if (previewShape) {
+        drawShape(previewShape, ctx, "red", "rgba(255,0,0,0.3)");
+
+        // Send preview to other users (throttled)
+        const now = Date.now();
+        if (now - lastPreviewSent > THROTTLE_MS) {
+          lastPreviewSent = now;
+          socket.send(JSON.stringify({
+            type: "draw_preview",
+            roomId: roomId,
+            shape: previewShape,
+          }));
+        }
       }
     }
   };
