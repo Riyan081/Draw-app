@@ -38,9 +38,11 @@ const AuthPage = ({isSignin}:{isSignin: boolean}) => {
                 }, { withCredentials: true });
 
                 if (res.data.success) {
-                    // Store token in localStorage for WebSocket usage
                     if (res.data.token) {
                         localStorage.setItem('token', res.data.token);
+                    }
+                    if (res.data.user?.name) {
+                        localStorage.setItem('userName', res.data.user.name);
                     }
                     router.push('/dashboard');
                 }
@@ -54,6 +56,9 @@ const AuthPage = ({isSignin}:{isSignin: boolean}) => {
                 if (res.data.success) {
                     if (res.data.token) {
                         localStorage.setItem('token', res.data.token);
+                    }
+                    if (res.data.user?.name) {
+                        localStorage.setItem('userName', res.data.user.name);
                     }
                     router.push('/dashboard');
                 }

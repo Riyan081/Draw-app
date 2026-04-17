@@ -32,6 +32,15 @@ function checkuser(token: string): string | null {
   }
 }
 
+// Helper: broadcast to everyone in a room EXCEPT the sender
+function broadcastToRoom(room: string, senderWs: WsWebSocket, message: object) {
+  users.forEach(user => {
+    if (user.rooms.includes(room) && user.ws !== senderWs) {
+      user.ws.send(JSON.stringify(message));
+    }
+  });
+}
+
 wss.on("connection", function connection(ws, request) {
   const url = request.url;
   if (!url) {
@@ -50,8 +59,6 @@ wss.on("connection", function connection(ws, request) {
     rooms:[],
     ws
   })
-
-
 
   ws.on("message", async function message(data) {
     let parsedData;
@@ -79,6 +86,7 @@ wss.on("connection", function connection(ws, request) {
       user.rooms = user?.rooms.filter(x => x !== parsedData.roomId);
     }
 
+    // ── Completed shape → save to DB + broadcast ────────────
     if(parsedData.type ==="chat"){
       const room = parsedData.roomId;
       const message = parsedData.message;
@@ -95,34 +103,101 @@ wss.on("connection", function connection(ws, request) {
         console.error("Failed to save chat to DB:", e);
       }
 
-      users.forEach(user=>{
-        if(user.rooms.includes(room)){
-          user.ws.send(JSON.stringify({
-            type:"chat",
-            roomId: room,
-            message,
-            userId: userId
-          }))
-        }
-      })
+      broadcastToRoom(room, ws, {
+        type: "chat",
+        roomId: room,
+        message,
+        userId: userId,
+        sessionUserId: parsedData.sessionUserId,
+      });
     }
 
-    // Live drawing preview — broadcast to others WITHOUT saving to DB
+    // ── Live drawing preview → broadcast only ───────────────
     if(parsedData.type === "draw_preview"){
-      const room = parsedData.roomId;
-      const shape = parsedData.shape;
+      broadcastToRoom(parsedData.roomId, ws, {
+        type: "draw_preview",
+        roomId: parsedData.roomId,
+        shape: parsedData.shape,
+        userId: userId,
+        sessionUserId: parsedData.sessionUserId,
+      });
+    }
 
-      users.forEach(user=>{
-        // Send to everyone in the room EXCEPT the sender
-        if(user.rooms.includes(room) && user.ws !== ws){
-          user.ws.send(JSON.stringify({
-            type: "draw_preview",
-            roomId: room,
-            shape,
-            userId: userId
-          }))
-        }
-      })
+    // ── Shape move → broadcast only ─────────────────────────
+    if(parsedData.type === "shape_move"){
+      broadcastToRoom(parsedData.roomId, ws, {
+        type: "shape_move",
+        roomId: parsedData.roomId,
+        sessionUserId: parsedData.sessionUserId,
+        shapeIndex: parsedData.shapeIndex,
+        dx: parsedData.dx,
+        dy: parsedData.dy,
+      });
+    }
+
+    // ── Cursor movement → broadcast only ────────────────────
+    if(parsedData.type === "cursor_move"){
+      broadcastToRoom(parsedData.roomId, ws, {
+        type: "cursor_move",
+        roomId: parsedData.roomId,
+        sessionUserId: parsedData.sessionUserId,
+        x: parsedData.x,
+        y: parsedData.y,
+        username: parsedData.username,
+        color: parsedData.color,
+      });
+    }
+
+    // ── User joined → broadcast only ────────────────────────
+    if(parsedData.type === "user_joined"){
+      broadcastToRoom(parsedData.roomId, ws, {
+        type: "user_joined",
+        roomId: parsedData.roomId,
+        sessionUserId: parsedData.sessionUserId,
+        username: parsedData.username,
+        color: parsedData.color,
+      });
+    }
+
+    // ── User presence reply → broadcast only ────────────────
+    if(parsedData.type === "user_presence"){
+      broadcastToRoom(parsedData.roomId, ws, {
+        type: "user_presence",
+        roomId: parsedData.roomId,
+        sessionUserId: parsedData.sessionUserId,
+        username: parsedData.username,
+        color: parsedData.color,
+      });
+    }
+
+    // ── Text chat → broadcast only (ephemeral) ──────────────
+    if(parsedData.type === "text_chat"){
+      broadcastToRoom(parsedData.roomId, ws, {
+        type: "text_chat",
+        roomId: parsedData.roomId,
+        sessionUserId: parsedData.sessionUserId,
+        username: parsedData.username,
+        color: parsedData.color,
+        text: parsedData.text,
+        timestamp: parsedData.timestamp,
+      });
+    }
+
+    // ── User left → broadcast only ──────────────────────────
+    if(parsedData.type === "user_left"){
+      broadcastToRoom(parsedData.roomId, ws, {
+        type: "user_left",
+        roomId: parsedData.roomId,
+        sessionUserId: parsedData.sessionUserId,
+      });
+    }
+  });
+
+  // Clean up when connection closes
+  ws.on("close", () => {
+    const idx = users.findIndex(x => x.ws === ws);
+    if (idx !== -1) {
+      users.splice(idx, 1);
     }
   });
 });
