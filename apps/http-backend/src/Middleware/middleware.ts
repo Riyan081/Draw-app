@@ -12,7 +12,11 @@ declare global {
 }
 
 export function middleware(req: Request, res: Response, next: NextFunction) {
-    const { token } = req.cookies;
+    // Check Authorization header first, then fallback to cookie
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith("Bearer ") 
+        ? authHeader.slice(7) 
+        : req.cookies?.token;
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };

@@ -208,4 +208,57 @@ userRoute.get("/room/:slug", async(req,res)=>{
 
 
 
+// ── My Rooms — rooms created by user + rooms they've drawn in ──
+userRoute.get("/rooms", middleware, async (req, res): Promise<void> => {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized", success: false });
+            return;
+        }
+
+        // Rooms the user created
+        const createdRooms = await prismaClient.room.findMany({
+            where: { adminId: userId },
+            include: {
+                _count: { select: { chats: true } },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        // Rooms the user has drawn in (but didn't create)
+        const drawnInRooms = await prismaClient.room.findMany({
+            where: {
+                chats: { some: { userId } },
+                adminId: { not: userId },
+            },
+            include: {
+                _count: { select: { chats: true } },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        res.json({
+            success: true,
+            createdRooms: createdRooms.map(r => ({
+                id: r.id,
+                slug: r.slug,
+                createdAt: r.createdAt,
+                drawingCount: r._count.chats,
+            })),
+            joinedRooms: drawnInRooms.map(r => ({
+                id: r.id,
+                slug: r.slug,
+                createdAt: r.createdAt,
+                drawingCount: r._count.chats,
+            })),
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: "Failed to fetch rooms",
+            success: false,
+        });
+    }
+});
+
 export default userRoute;
