@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config({ path: "../../.env" });
 import { prismaClient } from '@repo/db/client';
 
 import { WebSocketServer } from "ws";

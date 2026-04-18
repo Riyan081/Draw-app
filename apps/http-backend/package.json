@@ -15,6 +15,7 @@
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2"
   },
@@ -22,8 +23,8 @@
     "@repo/backend-common": "workspace:*",
     "@repo/common": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/express": "^5.0.0",
-    "@types/cors": "^2.8.13"
+    "@types/cors": "^2.8.13",
+    "@types/express": "^5.0.0"
   },
   "keywords": [],
   "author": "",
